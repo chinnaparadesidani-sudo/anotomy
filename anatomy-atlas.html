@@ -1,0 +1,826 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Anatomy Atlas: 3D Human Body Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light dark;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  --bg1:#f1f4f6; --bg2:#cfd9e0;
+  --panel:#fbfcfd; --line:#c7d1d8; --ink:#101b24; --ink2:#4b5c68;
+  --accent:#0b6e75; --accent-ink:#ffffff; --track:#c3ced6; --chip:#e8eef2;
+  --shadow:0 10px 30px rgba(16,27,36,.12);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg1:#18303d; --bg2:#09131a;
+    --panel:#13222c; --line:#2a404e; --ink:#e8eff3; --ink2:#9fb2be;
+    --accent:#5fd0c5; --accent-ink:#06211f; --track:#2c4350; --chip:#1c303c;
+    --shadow:0 10px 30px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg1:#18303d; --bg2:#09131a;
+  --panel:#13222c; --line:#2a404e; --ink:#e8eff3; --ink2:#9fb2be;
+  --accent:#5fd0c5; --accent-ink:#06211f; --track:#2c4350; --chip:#1c303c;
+  --shadow:0 10px 30px rgba(0,0,0,.4);
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{
+  font-family:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+  color:var(--ink);
+  background:radial-gradient(1100px 800px at 50% 42%,var(--bg1),var(--bg2));
+  overflow:hidden;-webkit-font-smoothing:antialiased;
+}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+canvas:active{cursor:grabbing}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.brand{position:fixed;top:calc(env(safe-area-inset-top,0px) + 18px);left:22px;max-width:270px;pointer-events:none}
+.brand h1{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:38px;line-height:1;margin:0 0 6px;letter-spacing:-.01em}
+.brand p{margin:0;font-size:13px;line-height:1.45;color:var(--ink2)}
+
+.parts{
+  position:fixed;left:16px;top:calc(env(safe-area-inset-top,0px) + 112px);
+  width:272px;max-height:calc(100% - 250px - env(safe-area-inset-top,0px));
+  overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  box-shadow:var(--shadow);padding:6px;
+}
+.parts details{border-radius:8px}
+.parts summary{
+  list-style:none;display:flex;align-items:center;gap:10px;padding:8px 8px;cursor:pointer;
+  font-weight:600;font-size:14px;border-radius:8px;
+}
+.parts summary::-webkit-details-marker{display:none}
+.parts summary:hover{background:var(--chip)}
+.dot{width:12px;height:12px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}
+.sname{flex:1}
+.eye{
+  border:1px solid var(--line);background:transparent;border-radius:999px;padding:2px 10px;
+  font-size:12px;color:var(--ink2);cursor:pointer;
+}
+.eye[aria-pressed="false"]{background:var(--chip);color:var(--ink2);text-decoration:line-through}
+.eye:hover{border-color:var(--accent);color:var(--ink)}
+.plist{display:flex;flex-direction:column;padding:0 0 6px 30px}
+.pbtn{
+  text-align:left;background:none;border:0;padding:5px 8px;border-radius:6px;font-size:13px;color:var(--ink2);cursor:pointer;
+}
+.pbtn:hover{background:var(--chip);color:var(--ink)}
+.pbtn.on{background:var(--accent);color:var(--accent-ink)}
+
+.info{
+  position:fixed;right:16px;top:calc(env(safe-area-inset-top,0px) + 18px);
+  width:340px;max-height:calc(100% - 170px - env(safe-area-inset-top,0px));overflow:auto;
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);
+  padding:20px 22px 22px;
+}
+.info h2{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:32px;line-height:1.05;margin:6px 0 10px;letter-spacing:-.01em}
+.info h3{font-size:13px;font-weight:600;margin:18px 0 4px;color:var(--ink2)}
+.info p{margin:0;font-size:14.5px;line-height:1.55}
+.info ul{margin:4px 0 0;padding-left:18px;font-size:14px;line-height:1.5}
+.info li{margin:4px 0}
+.systag{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink2)}
+.info .note{margin-top:18px;font-size:12px;color:var(--ink2)}
+.close{
+  margin-top:16px;border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 16px;font-size:13px;cursor:pointer;
+}
+.close:hover{border-color:var(--accent)}
+.info.hint h2{font-size:26px}
+.info.hint p+p{margin-top:10px;color:var(--ink2);font-size:13.5px}
+
+.dock{
+  position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(env(safe-area-inset-bottom,0px) + 18px);
+  width:min(540px,calc(100% - 32px));
+  background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);
+  padding:14px 20px 14px;
+}
+.dock-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px}
+.dock-top label{font-weight:600;font-size:15px}
+.dock-top output{font-variant-numeric:tabular-nums;color:var(--ink2);font-size:14px}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:28px;margin:0;background:transparent;cursor:pointer;
+}
+input[type=range]::-webkit-slider-runnable-track{
+  height:8px;border-radius:99px;
+  background:linear-gradient(to right,var(--accent) var(--p,0%),var(--track) var(--p,0%));
+}
+input[type=range]::-moz-range-track{height:8px;border-radius:99px;background:var(--track)}
+input[type=range]::-moz-range-progress{height:8px;border-radius:99px;background:var(--accent)}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:26px;height:26px;border-radius:50%;margin-top:-9px;
+  background:var(--panel);border:3px solid var(--accent);box-shadow:0 2px 8px rgba(0,0,0,.25);
+}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--panel);border:3px solid var(--accent)}
+.dock-ends{display:flex;justify-content:space-between;font-size:12px;color:var(--ink2);margin-top:2px}
+.dock-actions{display:flex;gap:8px;margin-top:10px}
+.dock-actions button{
+  flex:1;border:1px solid var(--line);background:var(--chip);border-radius:999px;padding:8px 12px;font-size:13px;cursor:pointer;
+}
+.dock-actions button:hover{border-color:var(--accent)}
+.dock-actions button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
+.tip{
+  position:fixed;pointer-events:none;z-index:5;transform:translate(14px,14px);
+  background:var(--ink);color:var(--panel);font-size:12.5px;padding:5px 10px;border-radius:6px;opacity:0;transition:opacity .12s;
+  white-space:nowrap;
+}
+.tip.show{opacity:1}
+.ptoggle{display:none}
+
+@media (max-width:760px){
+  .brand{left:16px;top:calc(env(safe-area-inset-top,0px) + 12px)}
+  .brand h1{font-size:30px}
+  .brand p{display:none}
+  .ptoggle{
+    display:block;position:fixed;right:14px;top:calc(env(safe-area-inset-top,0px) + 14px);z-index:6;
+    background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:8px 16px;font-size:14px;font-weight:600;cursor:pointer;
+  }
+  .parts{display:none;left:12px;right:12px;width:auto;top:calc(env(safe-area-inset-top,0px) + 58px);max-height:50%;z-index:5}
+  body.drawer .parts{display:block}
+  .info{
+    left:12px;right:12px;width:auto;top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 152px);
+    max-height:34%;padding:14px 16px 16px;
+  }
+  .info h2{font-size:26px}
+  .info.hint{display:none}
+  .dock{padding:10px 16px 10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px)}
+  .dock-top{margin-bottom:2px}
+  .dock-ends{display:none}
+  .dock-actions{margin-top:4px}
+  .dock-actions button{padding:6px 10px}
+}
+@media (prefers-reduced-motion: reduce){ .tip{transition:none} }
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="Interactive 3D human body. Drag to rotate, scroll to zoom, click a part to learn about it."></canvas>
+
+<header class="brand">
+  <h1>Anatomy Atlas</h1>
+  <p>Drag to rotate, scroll to zoom, tap any bone, muscle or organ to learn about it.</p>
+</header>
+
+<button class="ptoggle" id="ptoggle" aria-expanded="false">Parts</button>
+<aside class="parts" id="parts" aria-label="Body parts and layers"></aside>
+
+<section class="info hint" id="info" aria-live="polite"></section>
+
+<div class="dock">
+  <div class="dock-top">
+    <label for="explode">Pull the body apart</label>
+    <output id="pct" for="explode">100%</output>
+  </div>
+  <input type="range" id="explode" min="0" max="100" step="1" value="100">
+  <div class="dock-ends"><span>Assembled</span><span>Fully separated</span></div>
+  <div class="dock-actions">
+    <button id="spin" aria-pressed="false">Spin</button>
+    <button id="reset">Reset view</button>
+  </div>
+</div>
+<div class="tip" id="tip"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+const T = THREE;
+const $ = s => document.querySelector(s);
+const clamp = (v,a,b) => Math.min(b, Math.max(a, v));
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- Systems ---------- */
+const SYS = {
+  nervous :{name:'Nervous system',       color:'#e6a1b3'},
+  skeletal:{name:'Skeletal system',      color:'#e6dcc0'},
+  muscular:{name:'Muscular system',      color:'#c9473d'},
+  cardio  :{name:'Cardiovascular system',color:'#d7303b'},
+  resp    :{name:'Respiratory system',   color:'#ee9aa3'},
+  digest  :{name:'Digestive system',     color:'#dc8c62'},
+  urinary :{name:'Urinary system',       color:'#cfa84a'},
+  skin    :{name:'Skin',                 color:'#e4b79c'}
+};
+const SPAN = { skin:[0,1], muscular:[0,.8], skeletal:[.05,.92], nervous:[.1,1], cardio:[.12,1], resp:[.12,1], digest:[.14,1], urinary:[.14,1] };
+
+/* ---------- Anatomy text ---------- */
+const INFO = {
+brain:{d:'The control center of the body: a soft, folded organ made of the cerebrum, cerebellum and brainstem, cushioned by fluid inside the skull.',f:'Processes the senses, forms thoughts and memories, plans movement, and runs automatic jobs like breathing and heart rate through the brainstem.',facts:['Weighs about 1.3 to 1.4 kg in adults','Contains roughly 86 billion neurons','Uses about 20% of the body\'s energy while making up about 2% of its weight','About 75% water']},
+skull:{d:'The bony frame of the head. Eight cranial bones form a protective case around the brain, and the facial bones shape the face and anchor the teeth.',f:'Protects the brain, houses the eyes, ears and nose, and gives muscles a place to attach for chewing and facial expressions.',facts:['22 bones counting the lower jaw','Cranial bones are joined by immovable joints called sutures','A newborn\'s skull bones are not yet fused, which lets the head pass through the birth canal and the brain grow']},
+mandible:{d:'The lower jaw, and the only skull bone that moves.',f:'Opens and closes the mouth for biting, chewing and speaking. It hinges at the temporomandibular joints just in front of each ear.',facts:['Largest and strongest bone of the face','Holds the 16 lower teeth in an adult','Two joints, one on each side, let it slide as well as hinge']},
+spine:{d:'The vertebral column: a flexible stack of vertebrae separated by cushioning discs, with a natural S-shaped curve.',f:'Supports the weight of the body, allows bending and twisting, and shelters the spinal cord, the main cable between brain and body.',facts:['33 vertebrae in total: 7 cervical, 12 thoracic, 5 lumbar, 5 fused sacral and 4 fused tailbone','This model shows the 24 movable vertebrae and they spread apart as you slide; the sacrum belongs to the pelvis','Discs between vertebrae act as shock absorbers','The spinal cord is about 43 to 45 cm long']},
+ribcage:{d:'A cage of 12 pairs of ribs joined at the back to the thoracic vertebrae and at the front to the breastbone (sternum) by flexible cartilage.',f:'Shields the heart and lungs, protects the upper abdominal organs, and lifts and lowers as you breathe.',facts:['24 ribs: 7 true pairs, 3 false pairs and 2 floating pairs','The two floating pairs do not attach to the sternum','Rib cartilage keeps the cage springy so it can expand with each breath']},
+clavicle:{d:'The collarbone: a slim S-shaped bone running from the breastbone to the shoulder blade.',f:'Acts as a strut that holds the shoulder out from the chest, giving the arm its wide range of motion.',facts:['The only bone that connects the arm to the rest of the skeleton','One of the most commonly broken bones','The shoulder blades are not modeled here']},
+pelvis:{d:'A basin-shaped ring of bone made of two hip bones and the sacrum. Each hip bone is formed by the ilium, ischium and pubis.',f:'Carries the weight of the upper body, connects the spine to the legs, and protects the bladder and other pelvic organs.',facts:['The female pelvis is usually wider and more open to allow childbirth','Hip sockets (acetabula) receive the heads of the thigh bones','The sacrum is five vertebrae fused into one triangular bone']},
+humerus:{d:'The long bone of the upper arm, between shoulder and elbow.',f:'Forms the ball-and-socket shoulder joint and part of the elbow hinge, and anchors the muscles that lift and bend the arm.',facts:['The longest bone of the arm, around 30 cm in adults','The radial nerve winds around its shaft','The shoulder is the most mobile joint in the body']},
+forearm:{d:'Two parallel bones between elbow and wrist: the radius on the thumb side and the ulna on the little-finger side.',f:'Let you turn the palm up and down (supination and pronation) and carry the wrist joint.',facts:['The radius rolls across the ulna when you turn your palm','The ulna forms the bony point of the elbow','The radius is wider at the wrist, the ulna is wider at the elbow']},
+hand:{d:'The bones of the hand: carpals in the wrist, metacarpals in the palm and phalanges in the fingers. Simplified in this model.',f:'Gives you grip and fine control, from lifting a bag to writing a word.',facts:['27 bones in each hand: 8 carpals, 5 metacarpals and 14 phalanges','Fingers contain no muscles; long tendons from the forearm move them','The thumb\'s saddle joint lets it touch every other finger']},
+femur:{d:'The thigh bone, from hip to knee.',f:'Carries body weight when you stand, walk and run, and works as a lever for the large thigh muscles.',facts:['The longest, heaviest and strongest bone in the body','About a quarter of your height','The neck just below the ball is a common fracture site in older adults']},
+patella:{d:'The kneecap: a small triangular bone embedded in the tendon of the quadriceps.',f:'Protects the front of the knee and increases the leverage of the thigh muscles when you straighten your leg.',facts:['The largest sesamoid bone (a bone that grows inside a tendon)','Glides in a groove at the end of the femur','Starts as cartilage and turns to bone during early childhood']},
+tibia:{d:'The shinbone and the thinner fibula beside it.',f:'The tibia carries nearly all the weight from knee to ankle. The fibula steadies the ankle and gives muscles somewhere to attach.',facts:['The tibia is the second-longest bone in the body','The front edge of the shin lies just under the skin','The fibula carries only a small share of body weight']},
+foot:{d:'A simplified foot skeleton: tarsals in the heel and midfoot, metatarsals, and toe bones.',f:'Supports your weight, absorbs shock and pushes off the ground when you walk or run.',facts:['26 bones in each foot: 7 tarsals, 5 metatarsals and 14 phalanges','The heel bone (calcaneus) is the largest bone of the foot','The arches work like springs']},
+pec:{d:'A large fan-shaped chest muscle running from the collarbone and breastbone to the upper arm.',f:'Pulls the arm across the body, rotates it inward and helps push forward, as in a push-up.',facts:['Works with the smaller pectoralis minor lying beneath it','Sits over the ribs, with breast tissue on top','A key muscle for throwing and pushing']},
+abs:{d:'The rectus abdominis: a paired, strap-like muscle running down the front of the abdomen.',f:'Bends the trunk forward, keeps the torso stable and helps compress the abdomen.',facts:['Tendon bands divide it into the segments known as a "six-pack"','Works with the obliques and transversus abdominis as part of the core','A layer of fat hides the segments in most people']},
+backm:{d:'The trapezius and latissimus dorsi: broad sheets of muscle covering the upper and middle back.',f:'The trapezius moves and steadies the shoulder blades and neck. The lats pull the arms down and back, as in rowing or climbing.',facts:['The latissimus dorsi is the broadest muscle of the back','The trapezius is named for its diamond shape','Deeper muscles along the spine keep you upright']},
+armm:{d:'The deltoid on the shoulder, the biceps at the front of the upper arm and the triceps at the back.',f:'The deltoid lifts the arm in every direction, the biceps bends the elbow and turns the palm up, and the triceps straightens the elbow.',facts:['Biceps has two heads, triceps has three','The triceps is larger than the biceps','The deltoid is named after the Greek letter delta']},
+forearmm:{d:'The muscles of the forearm: flexors on the palm side and extensors on the back, tapering into long tendons.',f:'Bend and straighten the wrist and fingers and give you grip strength.',facts:['The forearm holds about 20 muscles','Tendons pass through a narrow tunnel at the wrist, the carpal tunnel','Pulling a tendon in the forearm moves a finger']},
+thighm:{d:'The quadriceps on the front of the thigh and the hamstrings behind it.',f:'The quadriceps straighten the knee for standing, climbing and jumping. The hamstrings bend the knee and extend the hip.',facts:['The quadriceps is one of the largest and strongest muscle groups','Four heads: rectus femoris and three vasti','The quadriceps tendon wraps over the kneecap']},
+calfm:{d:'The gastrocnemius and soleus form the calf and merge into the Achilles tendon.',f:'Raise the heel to push off the ground when you walk, run or jump, and help pump blood back toward the heart.',facts:['The Achilles tendon is the thickest and strongest tendon in the body','The soleus works almost constantly while you stand','Contracting calves squeeze leg veins and push blood upward']},
+heart:{d:'A fist-sized muscular pump with four chambers: two atria that receive blood and two ventricles that push it out.',f:'Sends oxygen-poor blood to the lungs and oxygen-rich blood to the rest of the body. It beats in this model, too.',facts:['About 250 to 350 g in adults','Beats about 100,000 times a day','Pumps roughly 5 litres of blood a minute at rest','The heart muscle has its own blood supply, the coronary arteries']},
+aorta:{d:'The body\'s largest artery. It leaves the left ventricle, arches over the heart and runs down in front of the spine, then forks toward the legs.',f:'Delivers oxygen-rich blood to every other artery in the body.',facts:['About 2 to 3 cm wide near the heart','Branches feed the head, arms, organs and legs','Elastic walls smooth out the pulse of each heartbeat']},
+vena:{d:'The inferior vena cava, the body\'s largest vein, which runs up beside the spine from the legs and abdomen into the heart.',f:'Returns oxygen-poor blood to the right atrium. A superior vena cava (not shown) drains the head and arms.',facts:['Walls are thinner than an artery\'s','Pressure is low, so muscle movement and one-way valves in veins help push blood along','Formed where the two iliac veins join']},
+trachea:{d:'The windpipe: a flexible tube reinforced with C-shaped cartilage rings, linking the throat to the lungs and splitting into two bronchi.',f:'Carries air in and out. Its lining of mucus and tiny hairs (cilia) traps dust and sweeps it upward.',facts:['About 10 to 12 cm long','16 to 20 cartilage rings keep it open','Splits at the carina into the left and right bronchi']},
+lungs:{d:'Two spongy organs in the chest, one on each side of the heart. The right has three lobes, the left has two to make room for the heart.',f:'Move oxygen into the blood and carbon dioxide out through millions of tiny air sacs called alveoli. They gently expand in this model.',facts:['Roughly 300 to 500 million alveoli','Gas-exchange surface of about 50 to 75 square metres','A resting adult takes 12 to 20 breaths a minute','The right lung is slightly larger than the left']},
+liver:{d:'The largest internal organ, tucked under the ribs on the right side. The small green sac is the gallbladder.',f:'Processes nutrients, makes bile for digesting fat, stores energy, filters toxins and drugs, and makes clotting proteins.',facts:['About 1.4 to 1.5 kg','Receives roughly a quarter of the blood pumped by the heart','Can regrow after part of it is removed','Carries out hundreds of separate jobs']},
+stomach:{d:'A J-shaped muscular bag in the upper left abdomen. Its walls churn food with acid and enzymes.',f:'Stores food and breaks it into a thick liquid called chyme before passing it to the small intestine.',facts:['Stomach acid has a pH of about 1.5 to 3.5','Holds about 1 to 1.5 litres when full','Food usually leaves in 2 to 4 hours','Its lining is replaced every few days']},
+intestines:{d:'The small intestine coils in the center of the abdomen and the large intestine frames it on three sides, ending at the rectum.',f:'The small intestine absorbs most nutrients. The large intestine absorbs water and salts and forms stool.',facts:['Small intestine: roughly 3 to 5 m long in a living person','Large intestine: about 1.5 m long','Tiny finger-like villi greatly increase the absorbing surface','Home to trillions of gut bacteria']},
+kidneys:{d:'Two bean-shaped organs at the back, just beneath the ribs on either side of the spine.',f:'Filter the blood, remove waste and extra water as urine, balance salts and help control blood pressure and red blood cell production.',facts:['About 11 cm long','About a million filtering units (nephrons) in each','Filter around 180 litres of fluid a day and return most of it','You can live healthily with one']},
+bladder:{d:'A stretchy muscular bag in the pelvis that stores urine from the kidneys.',f:'Holds urine until it is convenient to release it. Stretch receptors tell the brain when it is filling.',facts:['Typically holds 400 to 600 mL','The first urge usually comes at around 200 to 300 mL','Urine arrives through two ureters and leaves through the urethra']},
+skin:{d:'The body\'s outer covering, made of three layers: the epidermis, the dermis and the hypodermis.',f:'A barrier against germs and water loss. It regulates temperature, senses touch, pressure and pain, and makes vitamin D in sunlight.',facts:['The largest organ, covering about 1.5 to 2 square metres in adults','Roughly 15% of body weight','The outer layer renews about every 4 to 6 weeks','It fades out as you pull the body apart so you can see inside']}
+};
+
+/* ---------- Scene ---------- */
+const canvas = $('#c');
+const renderer = new T.WebGLRenderer({canvas, antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+const scene = new T.Scene();
+const camera = new T.PerspectiveCamera(32, 1, 0.1, 400);
+scene.add(camera);
+camera.add(new T.HemisphereLight(0xffffff, 0x8b98a6, 0.85));
+const key = new T.DirectionalLight(0xffffff, 0.95); key.position.set(6,9,12); camera.add(key);
+const fill = new T.DirectionalLight(0xbcd3ff, 0.35); fill.position.set(-9,-3,6); camera.add(fill);
+const body = new T.Group(); scene.add(body);
+
+/* ---------- Geometry helpers ---------- */
+const V3 = (x,y,z) => new T.Vector3(x,y,z);
+const UP = V3(0,1,0);
+const sphereGeo = new T.SphereGeometry(1, 28, 20);
+
+function M(color, op, rough){
+  op = op === undefined ? 1 : op;
+  const m = new T.MeshStandardMaterial({color, roughness: rough === undefined ? .55 : rough, metalness:.02});
+  m.emissive = new T.Color(0xff9a1a); m.emissiveIntensity = 0;
+  m.userData.base = op; m.transparent = op < 0.999; m.opacity = op;
+  return m;
+}
+function ell(r, pos, mat, rot){
+  const m = new T.Mesh(sphereGeo, mat);
+  m.scale.set(r[0], r[1], r[2]); m.position.set(pos[0], pos[1], pos[2]);
+  if (rot) m.rotation.set(rot[0], rot[1], rot[2]);
+  return m;
+}
+function between(a, b){
+  const A = V3(a[0],a[1],a[2]), B = V3(b[0],b[1],b[2]);
+  const d = B.clone().sub(A);
+  return { c: A.clone().add(B).multiplyScalar(.5), len: d.length(), q: new T.Quaternion().setFromUnitVectors(UP, d.clone().normalize()) };
+}
+function cyl(a, b, r1, r2, mat, seg){
+  const o = between(a, b);
+  const m = new T.Mesh(new T.CylinderGeometry(r2, r1, o.len, seg || 14), mat);
+  m.position.copy(o.c); m.quaternion.copy(o.q); return m;
+}
+function bone(a, b, r, mat){
+  const g = new T.Group();
+  g.add(cyl(a, b, r*.55, r*.55, mat));
+  g.add(ell([r,r,r], a, mat)); g.add(ell([r,r,r], b, mat));
+  return g;
+}
+function muscle(a, b, rx, rz, mat){
+  const o = between(a, b);
+  const m = new T.Mesh(sphereGeo, mat);
+  m.scale.set(rx, o.len/2, rz); m.position.copy(o.c); m.quaternion.copy(o.q); return m;
+}
+function tube(pts, r, mat, seg){
+  const curve = new T.CatmullRomCurve3(pts.map(p => V3(p[0],p[1],p[2])));
+  return new T.Mesh(new T.TubeGeometry(curve, seg || 80, r, 10, false), mat);
+}
+
+/* ---------- Part registry ---------- */
+const parts = [];
+function add(def){
+  const p = Object.assign({fade:1, glow:0, k:0}, def);
+  p.title = def.name + (def.side ? ' (' + def.side.toLowerCase() + ')' : '');
+  p.meshes = [];
+  p.group.traverse(o => { if (o.isMesh){ o.userData.part = p; p.meshes.push(o); } });
+  p.mats = Array.from(new Set(p.meshes.map(m => m.material)));
+  p.span = SPAN[p.sys];
+  p.center0 = new T.Box3().setFromObject(p.group).getCenter(new T.Vector3());
+  body.add(p.group); parts.push(p); return p;
+}
+function pair(def, build){
+  [1,-1].forEach(s => {
+    const g = new T.Group(); build(g, s);
+    add(Object.assign({}, def, {
+      id: def.key + (s > 0 ? '_l' : '_r'), side: s > 0 ? 'Left' : 'Right', group: g,
+      exp: [def.exp[0]*s, def.exp[1], def.exp[2]]
+    }));
+  });
+}
+function single(def, g){ add(Object.assign({}, def, {id:def.key, group:g})); }
+
+const BONE = 0xe9e0c9;
+const zsp = y => { const t = clamp((15.35 - y)/6.45, 0, 1); return -.42 - .26*Math.sin(Math.PI*t); };
+
+/* ======= SKIN (ghost silhouette) ======= */
+(function(){
+  const g = new T.Group();
+  const m = M(0xe0b49a, .17, .9); m.depthWrite = false; m.side = T.DoubleSide;
+  const prof = [[1.35,7.9],[1.6,8.6],[1.4,9.8],[1.3,10.6],[1.45,11.8],[1.78,13.1],[1.85,14.2],[1.5,15.0],[.55,15.35],[.5,15.9]];
+  const pts = new T.SplineCurve(prof.map(p => new T.Vector2(p[0],p[1]))).getPoints(60);
+  const torso = new T.Mesh(new T.LatheGeometry(pts, 44), m); torso.scale.z = .78; g.add(torso);
+  g.add(ell([.95,1.12,1.02],[0,16.75,.02],m));
+  [1,-1].forEach(s => {
+    g.add(cyl([s*2.05,14.3,0],[s*2.2,11.65,0],.62,.48,m,20));
+    g.add(cyl([s*2.2,11.65,0],[s*2.45,9.3,0],.46,.34,m,20));
+    g.add(ell([.62,.62,.62],[s*2.05,14.3,0],m)); g.add(ell([.48,.48,.48],[s*2.2,11.65,0],m));
+    g.add(ell([.3,.62,.16],[s*2.5,8.75,0],m));
+    g.add(cyl([s*.85,8.0,0],[s*.9,4.3,0],.92,.62,m,22));
+    g.add(cyl([s*.9,4.3,0],[s*.92,.9,0],.6,.4,m,22));
+    g.add(ell([.62,.62,.62],[s*.9,4.3,0],m));
+    g.add(ell([.4,.28,.72],[s*.9,.4,.35],m));
+  });
+  g.children.forEach(c => c.renderOrder = 10);
+  single({key:'skin', name:'Skin', sys:'skin', exp:[0,0,0]}, g);
+})();
+
+/* ======= NERVOUS: Brain ======= */
+(function(){
+  const g = new T.Group(); const m = M(0xe3a4b2, 1, .7), m2 = M(0xd3909f, 1, .7), m3 = M(0xefd2a8, 1, .7);
+  [1,-1].forEach(s => g.add(ell([.34,.47,.6],[s*.31,16.92,.04],m)));
+  // gyri bumps
+  for (let i=0;i<22;i++){
+    const a = i*2.399, u = (i%11)/10;
+    const sx = (i%2?1:-1);
+    g.add(ell([.15,.12,.15],[sx*(.18+.35*Math.abs(Math.sin(a))),17.0+.3*Math.sin(a*1.7),-.3+.7*u],m));
+  }
+  g.add(ell([.36,.22,.26],[0,16.4,-.4],m2));
+  g.add(cyl([0,16.45,-.12],[0,15.7,-.25],.13,.1,m3));
+  single({key:'brain', name:'Brain', sys:'nervous', exp:[0,4.3,.2]}, g);
+})();
+
+/* ======= SKELETAL ======= */
+// Skull
+(function(){
+  const g = new T.Group(); const m = M(BONE, .62, .6), d = M(0x2a2420, .9);
+  g.add(ell([.8,.95,.9],[0,16.75,0],m));
+  g.add(ell([.52,.36,.42],[0,16.05,.55],m));
+  [1,-1].forEach(s => g.add(ell([.2,.2,.12],[s*.33,16.6,.8],d)));
+  g.add(ell([.08,.14,.08],[0,16.25,.95],d));
+  single({key:'skull', name:'Skull', sys:'skeletal', exp:[0,2.2,0]}, g);
+})();
+// Mandible
+(function(){
+  const g = new T.Group(); const m = M(BONE, 1, .55);
+  const jaw = new T.Mesh(new T.TorusGeometry(.5,.09,8,24,Math.PI), m);
+  jaw.rotation.x = Math.PI/2; jaw.scale.y = .95; jaw.position.set(0,15.8,.12); g.add(jaw);
+  [1,-1].forEach(s => g.add(cyl([s*.5,15.8,.12],[s*.52,16.35,.0],.09,.09,m)));
+  single({key:'mandible', name:'Mandible (lower jaw)', sys:'skeletal', exp:[0,1.3,1.1]}, g);
+})();
+// Spine
+(function(){
+  const g = new T.Group(); const m = M(BONE, 1, .6); const n = 24; const items = [];
+  for (let i=0;i<n;i++){
+    const y = 15.35 - i*(6.45/(n-1)); const r = i<7 ? .2 : i<19 ? .27 : .34;
+    const v = new T.Group(); v.position.set(0, y, zsp(y)); v.userData.y0 = y;
+    v.add(new T.Mesh(new T.CylinderGeometry(r,r,.2,16), m));
+    const sp = new T.Mesh(new T.BoxGeometry(.09,.13,.32), m); sp.position.set(0,-.02,-(r+.14)); v.add(sp);
+    const tp = new T.Mesh(new T.BoxGeometry(r*2.8,.06,.1), m); tp.position.set(0,0,-r*.7); v.add(tp);
+    g.add(v); items.push(v);
+  }
+  single({key:'spine', name:'Spine (vertebral column)', sys:'skeletal', exp:[0,0,-2.6],
+    onUpdate:k => items.forEach((v,i) => { v.position.y = v.userData.y0 + (i-(n-1)/2)*.17*k; })}, g);
+})();
+// Ribcage + sternum
+(function(){
+  const g = new T.Group(); const m = M(BONE, 1, .55); const ribs = [];
+  const ribY = i => 14.55 - i*.36;
+  const ribR = i => .7 + .62*Math.sin(Math.PI*(i+1.2)/13.4);
+  for (let i=0;i<12;i++){
+    const y = ribY(i), r = ribR(i), zc = zsp(y) + .62*r + .05, fg = i<7 ? .14 : i<10 ? .5 : 1.0;
+    [1,-1].forEach(s => {
+      const len = Math.PI - .22 - fg;
+      const geo = new T.TorusGeometry(r, .065, 8, 36, len);
+      geo.rotateZ(s>0 ? -Math.PI/2 + .22 : Math.PI/2 + fg);
+      const mesh = new T.Mesh(geo, m);
+      mesh.rotation.x = Math.PI/2 + .17; mesh.scale.y = .62; mesh.position.set(0, y, zc);
+      mesh.userData.y0 = y; mesh.userData.i = i; g.add(mesh); ribs.push(mesh);
+    });
+  }
+  const st = new T.Mesh(new T.BoxGeometry(.4,2.4,.14), m); st.position.set(0,13.4,.85); st.rotation.x = -.18; g.add(st);
+  const xi = new T.Mesh(new T.BoxGeometry(.18,.4,.1), m); xi.position.set(0,12.05,1.0); g.add(xi);
+  single({key:'ribcage', name:'Ribcage and sternum', sys:'skeletal', exp:[0,0,3.0],
+    onUpdate:k => ribs.forEach(r => { r.position.y = r.userData.y0 + (r.userData.i-5.5)*.12*k; })}, g);
+})();
+// Clavicle
+pair({key:'clavicle', name:'Clavicle', sys:'skeletal', exp:[1.3,1.1,1.4]}, (g,s) => {
+  const m = M(BONE, 1, .55);
+  g.add(bone([s*.22,14.78,.55],[s*1.0,14.85,.4],.1,m));
+  g.add(bone([s*1.0,14.85,.4],[s*1.85,14.7,.05],.1,m));
+});
+// Pelvis
+(function(){
+  const g = new T.Group(); const m = M(BONE, 1, .55);
+  [1,-1].forEach(s => {
+    g.add(ell([.75,.62,.2],[s*.82,8.65,-.12],m,[0,-s*.55,s*.25]));
+    g.add(ell([.3,.3,.3],[s*.72,7.95,0],m));
+  });
+  const ring = new T.Mesh(new T.TorusGeometry(.78,.13,8,32), m);
+  ring.rotation.x = Math.PI/2; ring.scale.y = .75; ring.position.set(0,7.9,.05); g.add(ring);
+  g.add(cyl([0,9.1,-.42],[0,7.9,-.5],.42,.14,m));
+  single({key:'pelvis', name:'Pelvis and sacrum', sys:'skeletal', exp:[0,-1.1,-1.0]}, g);
+})();
+// Humerus
+pair({key:'humerus', name:'Humerus', sys:'skeletal', exp:[3.1,.5,0]}, (g,s) => {
+  g.add(bone([s*2.0,14.25,0],[s*2.2,11.65,0],.2,M(BONE,1,.55)));
+});
+// Forearm bones
+pair({key:'forearm', name:'Radius and ulna', sys:'skeletal', exp:[3.9,-.4,0]}, (g,s) => {
+  const m = M(BONE,1,.55);
+  g.add(bone([s*2.3,11.6,.08],[s*2.58,9.3,.1],.13,m));
+  g.add(bone([s*2.1,11.65,-.08],[s*2.3,9.3,-.08],.13,m));
+});
+// Hand bones
+pair({key:'hand', name:'Hand bones', sys:'skeletal', exp:[4.7,-1.0,0]}, (g,s) => {
+  const m = M(BONE,1,.55), cx = s*2.5;
+  g.add(ell([.27,.15,.12],[cx,9.15,0],m));
+  const lens = [.9,1.05,1.0,.8];
+  for (let i=0;i<4;i++){
+    const x = cx + (i-1.5)*.15, L = lens[i];
+    g.add(bone([x,9.05,0],[x,9.05-L*.45,0],.055,m));
+    g.add(bone([x,9.05-L*.45,0],[x,9.05-L,0],.05,m));
+  }
+  g.add(bone([cx+s*.2,9.1,.02],[cx+s*.5,8.55,.06],.06,m));
+});
+// Femur
+pair({key:'femur', name:'Femur', sys:'skeletal', exp:[1.6,-.4,0]}, (g,s) => {
+  const m = M(BONE,1,.55);
+  g.add(ell([.34,.34,.34],[s*.65,7.95,0],m));
+  g.add(cyl([s*.65,7.95,0],[s*1.0,7.45,0],.17,.2,m));
+  g.add(bone([s*1.0,7.45,0],[s*.9,4.4,.05],.3,m));
+});
+// Patella
+pair({key:'patella', name:'Patella (kneecap)', sys:'skeletal', exp:[1.9,-1.0,1.7]}, (g,s) => {
+  g.add(ell([.22,.27,.1],[s*.9,4.35,.42],M(BONE,1,.5)));
+});
+// Tibia + fibula
+pair({key:'tibia', name:'Tibia and fibula', sys:'skeletal', exp:[2.4,-1.8,0]}, (g,s) => {
+  const m = M(BONE,1,.55);
+  g.add(ell([.45,.1,.35],[s*.9,4.3,0],m));
+  g.add(bone([s*.9,4.2,0],[s*.92,.95,0],.24,m));
+  g.add(bone([s*1.2,4.0,-.06],[s*1.14,.95,-.06],.09,m));
+});
+// Foot bones
+pair({key:'foot', name:'Foot bones', sys:'skeletal', exp:[3.0,-2.7,.6]}, (g,s) => {
+  const m = M(BONE,1,.55), x0 = s*.92;
+  g.add(ell([.3,.2,.42],[x0,.5,-.1],m));
+  g.add(ell([.34,.14,.3],[x0,.32,.42],m));
+  for (let i=0;i<5;i++){
+    const x = x0 + (i-2)*.14*(s>0?1:1), L = i===0 ? 1.0 : .95;
+    g.add(bone([x,.3,.4],[x,.2,.4+L*.55],.065,m));
+    g.add(bone([x,.2,.4+L*.55],[x,.18,.4+L*.85],.05,m));
+  }
+});
+
+/* ======= MUSCULAR ======= */
+const MUS = 0xb8493f, MUS_A = .6;
+pair({key:'pec', name:'Pectoralis major', sys:'muscular', exp:[1.0,.8,4.0]}, (g,s) => {
+  const m = M(MUS, MUS_A, .7);
+  g.add(ell([.9,.58,.2],[s*.88,13.9,1.1],m,[0,s*-.25,s*.2]));
+});
+(function(){
+  const g = new T.Group(); const m = M(0xc05448, MUS_A, .7);
+  for (let r=0;r<4;r++) [1,-1].forEach(s => g.add(ell([.33,.33,.2],[s*.36,11.5-r*.62,.8],m)));
+  single({key:'abs', name:'Rectus abdominis', sys:'muscular', exp:[0,-.2,3.9]}, g);
+})();
+(function(){
+  const g = new T.Group(); const m = M(0xa83e36, MUS_A, .7);
+  g.add(ell([1.25,1.6,.2],[0,13.7,-1.02],m));
+  [1,-1].forEach(s => g.add(ell([.8,1.35,.2],[s*.98,11.5,-.96],m,[0,0,s*-.3])));
+  single({key:'backm', name:'Back muscles (trapezius and latissimus dorsi)', sys:'muscular', exp:[0,.3,-4.4]}, g);
+})();
+pair({key:'armm', name:'Upper arm muscles', sys:'muscular', exp:[3.5,.5,1.7]}, (g,s) => {
+  const m = M(MUS, MUS_A, .7);
+  g.add(ell([.52,.56,.5],[s*2.1,14.2,0],m));
+  g.add(muscle([s*2.08,13.7,.2],[s*2.2,12.1,.17],.36,.3,m));
+  g.add(muscle([s*2.12,13.6,-.2],[s*2.22,12.2,-.17],.38,.3,m));
+});
+pair({key:'forearmm', name:'Forearm muscles', sys:'muscular', exp:[4.2,-.4,1.7]}, (g,s) => {
+  const m = M(MUS, MUS_A, .7), t = M(0xe7d6c0, 1, .6);
+  g.add(muscle([s*2.22,11.55,.12],[s*2.4,9.9,.1],.34,.28,m));
+  g.add(muscle([s*2.1,11.5,-.15],[s*2.3,10.0,-.12],.3,.25,m));
+  g.add(cyl([s*2.4,9.9,.1],[s*2.5,9.2,.1],.1,.06,t));
+});
+pair({key:'thighm', name:'Thigh muscles', sys:'muscular', exp:[1.7,-.4,2.0]}, (g,s) => {
+  const m = M(MUS, MUS_A, .7);
+  g.add(muscle([s*.9,7.7,.28],[s*.92,4.7,.2],.52,.4,m));
+  g.add(muscle([s*1.2,7.4,.1],[s*1.15,4.8,.1],.36,.34,m));
+  g.add(muscle([s*.55,7.2,.15],[s*.6,4.9,.12],.33,.3,m));
+  g.add(muscle([s*.9,7.5,-.3],[s*.9,4.7,-.25],.5,.3,m));
+});
+pair({key:'calfm', name:'Calf muscles', sys:'muscular', exp:[2.5,-1.8,-1.8]}, (g,s) => {
+  const m = M(MUS, MUS_A, .7), t = M(0xe7d6c0, 1, .6);
+  g.add(muscle([s*.8,4.0,-.28],[s*.85,2.0,-.2],.32,.28,m));
+  g.add(muscle([s*1.05,4.0,-.28],[s*1.0,2.1,-.2],.3,.26,m));
+  g.add(cyl([s*.92,2.1,-.2],[s*.92,.85,-.12],.12,.07,t));
+});
+
+/* ======= CARDIOVASCULAR ======= */
+let heartMesh = null;
+(function(){
+  const g = new T.Group(); const m = M(0xb3242f, 1, .45), bl = M(0x3d62b0, 1, .5);
+  heartMesh = ell([.5,.6,.42],[.28,13.05,.36],m,[0,0,-.55]); heartMesh.userData.s0 = [.5,.6,.42]; g.add(heartMesh);
+  g.add(ell([.3,.27,.3],[-.1,13.45,.3],m));
+  g.add(cyl([.0,13.5,.3],[-.05,14.15,.25],.14,.14,bl));
+  g.add(cyl([.35,13.55,.3],[.4,14.1,.2],.13,.13,M(0xd23a3a,1,.45)));
+  single({key:'heart', name:'Heart', sys:'cardio', exp:[.5,2.5,1.0]}, g);
+})();
+(function(){
+  const g = new T.Group(); const m = M(0xc42b2b, 1, .4);
+  g.add(tube([[.32,13.55,.2],[.5,14.35,.12],[.35,14.45,-.15],[.2,14.0,-.38],[.15,12.5,-.42],[.12,10.5,-.42],[.1,8.9,-.3]], .15, m, 100));
+  g.add(tube([[.1,8.9,-.3],[.45,8.4,-.15],[.72,7.7,-.05]], .1, m, 20));
+  g.add(tube([[.1,8.9,-.3],[-.25,8.4,-.15],[-.5,7.7,-.05]], .1, m, 20));
+  single({key:'aorta', name:'Aorta', sys:'cardio', exp:[1.3,0,-1.3]}, g);
+})();
+(function(){
+  const g = new T.Group(); const m = M(0x3d5fa8, 1, .4);
+  g.add(tube([[-.12,12.7,.15],[-.25,11.5,-.2],[-.28,10,-.3],[-.25,8.9,-.3]], .17, m, 60));
+  g.add(tube([[-.25,8.9,-.3],[-.55,8.3,-.15],[-.85,7.6,-.05]], .11, m, 20));
+  g.add(tube([[-.25,8.9,-.3],[.1,8.4,-.1],[.5,7.7,0]], .11, m, 20));
+  single({key:'vena', name:'Inferior vena cava', sys:'cardio', exp:[-1.4,0,-1.3]}, g);
+})();
+
+/* ======= RESPIRATORY ======= */
+(function(){
+  const g = new T.Group(); const m = M(0xd9d3c4, 1, .5);
+  g.add(cyl([0,15.7,.15],[0,14.1,.15],.17,.17,m));
+  for (let i=0;i<9;i++){
+    const r = new T.Mesh(new T.TorusGeometry(.19,.03,6,14), m);
+    r.rotation.x = Math.PI/2; r.position.set(0,15.55-i*.18,.15); g.add(r);
+  }
+  g.add(cyl([0,14.1,.15],[.62,13.55,.15],.12,.09,m));
+  g.add(cyl([0,14.1,.15],[-.62,13.55,.15],.12,.09,m));
+  single({key:'trachea', name:'Trachea and bronchi', sys:'resp', exp:[0,1.1,1.3]}, g);
+})();
+const lungMeshes = [];
+pair({key:'lungs', name:'Lung', sys:'resp', exp:[2.8,1.0,.4]}, (g,s) => {
+  const m = M(0xea9aa2, 1, .6), k = s>0 ? .93 : 1;
+  const l = ell([.58*k,1.32*k,.66*k],[s*.84,13.3,.12],m,[0,0,s*-.06]);
+  l.userData.s0 = [.58*k,1.32*k,.66*k]; g.add(l); lungMeshes.push(l);
+});
+
+/* ======= DIGESTIVE ======= */
+(function(){
+  const g = new T.Group(); const m = M(0x7c2f23, 1, .5), gb = M(0x5f9a4a, 1, .5);
+  g.add(ell([1.05,.55,.62],[-.65,11.1,.25],m,[0,0,.15]));
+  g.add(ell([.55,.4,.5],[.3,11.05,.3],m,[0,0,-.2]));
+  g.add(ell([.13,.2,.13],[-.95,10.55,.62],gb));
+  single({key:'liver', name:'Liver and gallbladder', sys:'digest', exp:[-3.1,0,1.2]}, g);
+})();
+(function(){
+  const g = new T.Group(); const m = M(0xdb8a7a, 1, .5);
+  g.add(ell([.5,.68,.42],[.7,11.55,.3],m,[0,0,.9]));
+  g.add(tube([[.35,11.2,.3],[-.1,10.9,.4],[-.5,10.95,.35]], .1, m, 20));
+  single({key:'stomach', name:'Stomach', sys:'digest', exp:[3.1,.4,1.2]}, g);
+})();
+(function(){
+  const g = new T.Group(); const si = M(0xe8a392, 1, .5), li = M(0xc67862, 1, .5);
+  const pts = [];
+  for (let i=0;i<=70;i++){
+    const u = i/70;
+    pts.push([.72*Math.sin(i*1.05), 9.85 - 1.2*u + .07*Math.sin(i*2.1), .25 + .3*Math.cos(i*.8)]);
+  }
+  g.add(tube(pts, .12, si, 420));
+  g.add(tube([[-.95,8.85,.3],[-1.05,9.7,.35],[-.95,10.4,.4],[-.4,10.6,.5],[.4,10.6,.5],[.95,10.4,.4],[1.05,9.6,.35],[.95,8.9,.3],[.5,8.45,.15],[.1,8.2,-.05]], .17, li, 160));
+  single({key:'intestines', name:'Small and large intestines', sys:'digest', exp:[0,-1.1,1.8]}, g);
+})();
+
+/* ======= URINARY ======= */
+pair({key:'kidneys', name:'Kidney', sys:'urinary', exp:[2.7,-.6,-1.3]}, (g,s) => {
+  const m = M(0x8a2f3d, 1, .5), u = M(0xd8c36a, 1, .5);
+  g.add(ell([.23,.43,.2],[s*.78,10.7,-.38],m,[0,0,s*-.25]));
+  g.add(tube([[s*.68,10.4,-.35],[s*.5,9.4,-.1],[s*.25,8.3,.2]], .035, u, 24));
+});
+(function(){
+  const g = new T.Group();
+  g.add(ell([.32,.3,.3],[0,8.05,.35],M(0xd6b34f,1,.5)));
+  single({key:'bladder', name:'Bladder', sys:'urinary', exp:[0,-2.3,1.3]}, g);
+})();
+
+/* ---------- Layers / UI state ---------- */
+const layers = {}; Object.keys(SYS).forEach(k => layers[k] = true);
+let selected = null, hovered = null, expl = 1, explTarget = 1, userTouched = false;
+const slider = $('#explode'), pct = $('#pct'), infoEl = $('#info'), tip = $('#tip');
+
+function setExplode(v){
+  v = clamp(v, 0, 100);
+  slider.value = v; slider.style.setProperty('--p', v + '%'); pct.textContent = Math.round(v) + '%';
+  explTarget = v/100;
+}
+slider.addEventListener('input', () => { userTouched = true; setExplode(+slider.value); });
+
+/* Parts list */
+const partsEl = $('#parts');
+const order = ['nervous','skeletal','muscular','cardio','resp','digest','urinary','skin'];
+order.forEach(k => {
+  const list = parts.filter(p => p.sys === k);
+  const d = document.createElement('details'); d.open = window.innerWidth > 760 && (k === 'skeletal' || k === 'cardio');
+  const s = document.createElement('summary');
+  s.innerHTML = '<span class="dot" style="background:' + SYS[k].color + '"></span><span class="sname">' + SYS[k].name + '</span>';
+  const eye = document.createElement('button'); eye.className = 'eye'; eye.textContent = 'Visible';
+  eye.setAttribute('aria-pressed','true'); eye.setAttribute('aria-label','Toggle ' + SYS[k].name + ' visibility');
+  eye.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();
+    layers[k] = !layers[k]; eye.setAttribute('aria-pressed', String(layers[k]));
+    eye.textContent = layers[k] ? 'Visible' : 'Hidden';
+    if (!layers[k] && selected && selected.sys === k) select(null);
+  });
+  s.appendChild(eye); d.appendChild(s);
+  const pl = document.createElement('div'); pl.className = 'plist';
+  list.forEach(p => {
+    const b = document.createElement('button'); b.className = 'pbtn'; b.textContent = p.title; b.dataset.id = p.id;
+    b.addEventListener('click', () => { layers[p.sys] = true; select(selected === p ? null : p); });
+    p.btn = b; pl.appendChild(b);
+  });
+  d.appendChild(pl); partsEl.appendChild(d);
+});
+$('#ptoggle').addEventListener('click', e => {
+  const on = document.body.classList.toggle('drawer'); e.currentTarget.setAttribute('aria-expanded', String(on));
+});
+
+/* Info panel */
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function renderHint(){
+  infoEl.className = 'info hint';
+  infoEl.innerHTML = '<h2>Touch any part</h2><p>Tap or click a bone, muscle or organ to see what it is and what it does.</p><p>Pull the slider to separate every part of the body. Use the Visible buttons on the left to hide the skin or muscle layer and reach what lies underneath.</p>';
+}
+function renderInfo(p){
+  const i = INFO[p.key], s = SYS[p.sys];
+  infoEl.className = 'info';
+  infoEl.innerHTML =
+    '<div class="systag"><span class="dot" style="background:' + s.color + '"></span>' + esc(s.name) + '</div>' +
+    '<h2>' + esc(p.title) + '</h2>' +
+    '<p>' + esc(i.d) + '</p>' +
+    '<h3>What it does</h3><p>' + esc(i.f) + '</p>' +
+    '<h3>Quick facts</h3><ul>' + i.facts.map(f => '<li>' + esc(f) + '</li>').join('') + '</ul>' +
+    '<p class="note">Simplified model for learning. Proportions and details are approximate.</p>' +
+    '<button class="close" id="closeInfo">Close</button>';
+  $('#closeInfo').addEventListener('click', () => select(null));
+  infoEl.scrollTop = 0;
+}
+function select(p){
+  selected = p;
+  parts.forEach(q => q.btn && q.btn.classList.toggle('on', q === p));
+  if (p){ renderInfo(p); document.body.classList.remove('drawer'); }
+  else renderHint();
+}
+renderHint();
+
+/* ---------- Camera / controls ---------- */
+let theta = .5, phi = 1.38, userR = 27, curR = 27;
+const target = V3(0, 9.4, 0), targetGoal = V3(0, 9.4, 0);
+let spin = false;
+$('#spin').addEventListener('click', e => { spin = !spin; e.currentTarget.setAttribute('aria-pressed', String(spin)); });
+$('#reset').addEventListener('click', () => { theta = .5; phi = 1.38; userR = 27; select(null); });
+
+const ptrs = new Map(); let down = null, lastPinch = 0;
+canvas.addEventListener('pointerdown', e => {
+  canvas.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  down = {x:e.clientX, y:e.clientY, t:performance.now(), moved: ptrs.size > 1};
+  lastPinch = 0; tip.classList.remove('show');
+});
+canvas.addEventListener('pointermove', e => {
+  const p = ptrs.get(e.pointerId);
+  if (!p){ if (e.pointerType === 'mouse') hoverPick(e); return; }
+  const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+  if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) down.moved = true;
+  if (ptrs.size === 1){ theta -= dx*.008; phi = clamp(phi - dy*.006, .25, Math.PI - .25); }
+  else if (ptrs.size === 2){
+    const a = Array.from(ptrs.values()); const d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
+    if (lastPinch) userR = clamp(userR * lastPinch / d, 12, 55);
+    lastPinch = d;
+  }
+});
+function endPtr(e){
+  const had = ptrs.delete(e.pointerId); lastPinch = 0;
+  if (had && down && !down.moved && ptrs.size === 0 && performance.now() - down.t < 700 && e.type === 'pointerup') clickPick(e);
+}
+canvas.addEventListener('pointerup', endPtr);
+canvas.addEventListener('pointercancel', endPtr);
+canvas.addEventListener('pointerleave', () => { hovered = null; tip.classList.remove('show'); });
+canvas.addEventListener('wheel', e => { e.preventDefault(); userR = clamp(userR * Math.exp(e.deltaY*.0012), 12, 55); }, {passive:false});
+window.addEventListener('keydown', e => { if (e.key === 'Escape') select(null); });
+
+/* ---------- Picking ---------- */
+const ray = new T.Raycaster(), mouse = new T.Vector2();
+function pick(e){
+  const r = canvas.getBoundingClientRect();
+  mouse.set(((e.clientX - r.left)/r.width)*2 - 1, -((e.clientY - r.top)/r.height)*2 + 1);
+  ray.setFromCamera(mouse, camera);
+  const list = [];
+  parts.forEach(p => { if (layers[p.sys] && p.group.visible) p.meshes.forEach(m => list.push(m)); });
+  const hits = ray.intersectObjects(list, false);
+  let skinHit = null;
+  for (const h of hits){
+    const p = h.object.userData.part;
+    if (p.sys !== 'skin') return p;
+    if (!skinHit) skinHit = p;
+  }
+  return skinHit;
+}
+function hoverPick(e){
+  const p = pick(e); hovered = p; canvas.style.cursor = p ? 'pointer' : '';
+  if (p){ tip.textContent = p.title; tip.style.left = e.clientX + 'px'; tip.style.top = e.clientY + 'px'; tip.classList.add('show'); }
+  else tip.classList.remove('show');
+}
+function clickPick(e){ const p = pick(e); select(p && p !== selected ? p : (p ? null : null)); }
+
+/* ---------- Resize ---------- */
+let fit = 1;
+function resize(){
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h, false); camera.aspect = w/h;
+  fit = Math.max(1, .78/camera.aspect);
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize); resize();
+
+/* ---------- Loop ---------- */
+const clock = new T.Clock();
+function frame(){
+  const t = clock.getElapsedTime();
+  expl += (explTarget - expl) * .1;
+  if (Math.abs(explTarget - expl) < .0005) expl = explTarget;
+
+  parts.forEach(p => {
+    const a = p.span[0], b = p.span[1];
+    let k = clamp((expl - a)/(b - a), 0, 1); k = k*k*(3 - 2*k); p.k = k;
+    p.group.position.set(p.exp[0]*k, p.exp[1]*k, p.exp[2]*k);
+    if (p.onUpdate) p.onUpdate(k);
+
+    const on = layers[p.sys];
+    let goal = on ? 1 : 0;
+    if (on && selected && selected !== p) goal = .14;
+    p.fade += (goal - p.fade) * .16;
+    const skinF = p.sys === 'skin' ? Math.max(0, 1 - expl*1.8) : 1;
+    const vis = p.fade * skinF;
+    p.group.visible = vis > .02;
+    const gGoal = p === selected ? .38 + .12*Math.sin(t*4) : (p === hovered ? .3 : 0);
+    p.glow += (gGoal - p.glow) * .2;
+    p.mats.forEach(m => {
+      const o = m.userData.base * vis, tr = o < .999;
+      if (m.transparent !== tr){ m.transparent = tr; m.needsUpdate = true; }
+      m.opacity = o; m.depthWrite = p.sys !== 'skin' && o > .95;
+      m.emissiveIntensity = p.sys === 'skin' ? 0 : p.glow;
+    });
+  });
+
+  if (!reduce){
+    const beat = Math.max(0, Math.sin(t*6.2)); const hb = 1 + .06*beat*beat*beat;
+    const s0 = heartMesh.userData.s0; heartMesh.scale.set(s0[0]*hb, s0[1]*hb, s0[2]*hb);
+    const br = 1 + .03*Math.sin(t*1.7);
+    lungMeshes.forEach(l => { const s = l.userData.s0; l.scale.set(s[0]*br, s[1]*br, s[2]*br); });
+  }
+  if (spin && ptrs.size === 0) theta += .006;
+
+  if (selected){
+    const c = selected.center0;
+    targetGoal.set(c.x + selected.group.position.x, c.y + selected.group.position.y, c.z + selected.group.position.z);
+  } else targetGoal.set(0, 9.4 + expl*1.0, 0);
+  target.lerp(targetGoal, .08);
+  const R = userR * fit * (1 + .55*expl) * (selected ? .78 : 1);
+  curR += (R - curR) * .08;
+  camera.position.set(
+    target.x + curR*Math.sin(phi)*Math.sin(theta),
+    target.y + curR*Math.cos(phi),
+    target.z + curR*Math.sin(phi)*Math.cos(theta));
+  camera.lookAt(target);
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+
+/* Intro: start pulled apart, then assemble */
+setExplode(100); expl = 1;
+if (!reduce){
+  const t0 = performance.now();
+  (function step(now){
+    if (userTouched) return;
+    const u = clamp((now - t0 - 900)/2800, 0, 1), e = u*u*(3 - 2*u);
+    setExplode(100*(1 - e));
+    if (u < 1) requestAnimationFrame(step);
+  })(performance.now());
+} else setExplode(0);
+
+frame();
+})();
+</script>
+</body>
+</html>
